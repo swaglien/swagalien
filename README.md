@@ -1,101 +1,56 @@
 # Nutrition Tracker
 
-Nutrition Tracker is a browser-based daily nutrition dashboard with a Windows desktop version. It tracks meals, calories, protein, carbohydrates, and fat while keeping the web and Windows clients connected through Supabase.
+Nutrition Tracker helps you keep track of calories, protein, carbs, fat, meals, and nutrition goals from the website or Windows app.
 
-## Features
+## Get started
 
-- Daily calorie and macro tracking
-- Multi-food meals and quick logging
-- Maintain, lean bulk, cut, performance, protein focus, and custom goals
-- Metric and imperial units
-- Feet-and-inches height entry in the Windows app
-- Weekly calorie trend view
-- Recipe text and file parsing
-- Nutrition-label photo scanning with OCR
-- Email/password accounts
-- Supabase cloud sync between the website and Windows app
-- Local storage cache for offline use
-- Windows installer with GitHub Release auto-updates
+Open the website and create an account with your email and password. Use the same account in the Windows app so your profile, goals, and meals can sync between them.
 
-## Website
+Windows app downloads are available here:
 
-The website can be deployed as a static site through Vercel. The main web files are:
+https://github.com/swaglien/swagalien/releases
 
-- `index.html`
-- `style.css`
-- `script.js`
-- `supabase-config.js`
+## What you can do
 
-The site includes a **Download Windows app** link that points to the latest GitHub Release installer:
+- Set your age, weight, height, units, and nutrition goal.
+- Choose Maintain, Lean Bulk, Cut, Performance, Protein Focus, or Custom.
+- Add a meal with several foods at once.
+- Use Quick Log for fast entries.
+- Track calories, protein, carbs, and fat for the day.
+- View your seven-day calorie trend.
+- Use the body-status scale as a general BMI-style reference.
 
-`https://github.com/swaglien/swagalien/releases`
+## Import a recipe
 
-## Supabase setup
+You can paste recipe text or upload a recipe file. Nutrition Tracker looks for calories, protein, carbs, and fat, then lets you review the results before adding the recipe to your meals.
 
-The app uses Supabase for authentication and synchronized data. The database contains:
+You can also upload a photo of a nutrition label and choose **Scan photo**. The app reads the visible text and extracts the nutrition numbers. Use a clear, well-lit photo and check the results before saving.
 
-- `profiles`
-- `goals`
-- `meals`
-- `meal_items`
+## Sync between devices
 
-Run the database setup SQL in **Supabase Dashboard -> SQL Editor** before testing cloud sync. Row Level Security policies ensure authenticated users can access only their own records.
+1. Create an account on the website.
+2. Sign into the Windows app with the same email and password.
+3. Add or edit your meals, profile, or goals.
+4. Use **Sync now** if you want to refresh immediately.
 
-The browser and Windows app use the Supabase publishable key. Never put a Supabase `service_role` or secret key in frontend files.
+The app also keeps a local copy on each device. Internet access is needed for account access, cloud syncing, photo scanning, and app updates.
 
-In Supabase Authentication URL Configuration, set the Site URL to the deployed Vercel URL and add that URL to the allowed Redirect URLs.
+## Windows updates
 
-## Windows app
+The Windows app checks for new versions when it opens. Available updates download in the background and install after you close the app.
 
-The Windows app is packaged with Electron. Install Node.js LTS, then run these commands from the project folder:
+The current Windows release is available on the GitHub Releases page above.
 
-```powershell
-npm install
-npm start
-```
+## Troubleshooting
 
-To build the installer:
+**The confirmation link opens localhost:** Use the newest confirmation email after the website URL has been configured in the account settings.
 
-```powershell
-npm run dist
-```
+**My meals are not showing on another device:** Check that both devices use the same account, confirm that you are online, and click **Sync now**.
 
-The installer is generated in `dist`.
+**The photo scan cannot read my label:** Try a brighter, closer, less blurry photo with the nutrition text facing the camera.
 
-## Publishing a Windows release
+**The Windows app will not open:** Download the newest installer from the GitHub Releases page and install it over the previous version.
 
-Update the version in `package.json` for every release. Each release must have a higher version than the previous one, such as `1.0.3`.
+## Privacy
 
-Build the installer, then create a GitHub Release with the matching tag, for example `v1.0.3`. Upload these generated files:
-
-- `Nutrition Tracker Setup 1.0.3.exe`
-- `Nutrition Tracker Setup 1.0.3.exe.blockmap`
-- `latest.yml`
-
-The packaged app checks GitHub Releases when it opens, downloads newer versions in the background, and installs them after the app closes.
-
-The current release is `v1.0.2`.
-
-## Data and privacy
-
-Before signing in, data is stored locally in the browser or Windows app. After signing in, profile, goals, meals, and meal items sync to the authenticated Supabase account. Existing local data is not automatically migrated into a new account.
-
-Recipe OCR reads text visible in an uploaded image. It does not infer nutrition from ingredient quantities, and OCR results should be reviewed before adding them to a meal.
-
-## Project structure
-
-```text
-index.html            Web app layout
-style.css             Web app styles
-script.js             Nutrition logic, auth, sync, and OCR workflow
-supabase-config.js    Supabase project URL and publishable key
-main.js               Electron Windows entry point
-preload.js            Restricted Electron update bridge
-package.json          Electron and build configuration
-WINDOWS-APP.md        Windows build notes
-dist/                 Generated Windows installers
-```
-
-## Future clients
-
-The Supabase schema and client behavior are designed to be reusable by a future iPhone/SwiftUI client. Apple support is not included in the current release.
+Your account data is associated with your signed-in account. Nutrition data is stored locally when you are offline and syncs to your account when you reconnect. Review imported nutrition values before adding them to your daily log.
