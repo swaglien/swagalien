@@ -50,6 +50,22 @@ select {
   width: min(100%, 520px);
 }
 
+.download-app-link {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.download-app-link:hover {
+  background: var(--primary-soft);
+}
+
 .auth-form,
 .auth-signed-in {
   display: flex;
@@ -618,6 +634,10 @@ button:hover {
 
   .account-access {
     width: 100%;
+  }
+
+  .download-app-link {
+    width: fit-content;
   }
 
   .auth-form,
