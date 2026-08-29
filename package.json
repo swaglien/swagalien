@@ -1,0 +1,33 @@
+{
+  "name": "nutrition-tracker",
+  "version": "1.0.0",
+  "description": "A local nutrition tracker for Windows and the web.",
+  "main": "main.js",
+  "author": "Finn",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^37.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.finn.nutritiontracker",
+    "productName": "Nutrition Tracker",
+    "files": [
+      "index.html",
+      "style.css",
+      "script.js",
+      "main.js"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

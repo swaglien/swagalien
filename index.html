@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nutrition Tracker</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Daily nutrition</p>
+          <h1>Nutrition Tracker</h1>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel profile-panel">
+          <h2>Account</h2>
+          <form id="profile-form" class="profile-form">
+            <label>
+              Name
+              <input type="text" id="account-name" placeholder="Your name" />
+            </label>
+
+            <div class="field-row">
+              <label>
+                Age
+                <input type="number" id="account-age" min="1" value="28" />
+              </label>
+              <label>
+                Units
+                <select id="account-units">
+                  <option value="metric">Metric</option>
+                  <option value="imperial">Imperial</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label>
+                Weight
+                <input type="number" id="account-weight" min="1" step="0.1" value="75" />
+              </label>
+              <label>
+                Height
+                <input type="number" id="account-height" min="1" step="1" value="178" />
+                <span id="desktop-height-fields" class="desktop-only height-imperial-fields">
+                  <input type="number" id="account-height-feet" min="0" step="1" placeholder="Feet" aria-label="Height in feet" />
+                  <input type="number" id="account-height-inches" min="0" max="11" step="1" placeholder="Inches" aria-label="Height in inches" />
+                </span>
+              </label>
+            </div>
+
+            <label>
+              Goal
+              <select id="account-goal">
+                <option value="maintain">Maintain</option>
+                <option value="lean-bulk">Lean Bulk</option>
+                <option value="cut">Cut</option>
+                <option value="performance">Performance</option>
+                <option value="protein-focus">Protein Focus</option>
+                <option value="custom">Custom</option>
+              </select>
+            </label>
+
+            <button type="submit">Update targets</button>
+          </form>
+
+          <div class="recommended-box">
+            <h3>Recommended intake</h3>
+            <p id="recommended-summary">Lean bulk target</p>
+            <div class="mini-grid">
+              <div><span>Calories</span><strong id="recommended-calories">0</strong></div>
+              <div><span>Protein</span><strong id="recommended-protein">0g</strong></div>
+              <div><span>Carbs</span><strong id="recommended-carbs">0g</strong></div>
+              <div><span>Fat</span><strong id="recommended-fat">0g</strong></div>
+            </div>
+          </div>
+
+          <div class="bmi-card">
+            <div class="bmi-header">
+              <h3>Body status</h3>
+              <span id="bmi-label" class="bmi-label">Healthy</span>
+            </div>
+            <div class="bmi-scale" aria-label="BMI scale">
+              <div class="bmi-scale-track"></div>
+              <div id="bmi-marker" class="bmi-marker"></div>
+            </div>
+            <div class="bmi-scale-labels">
+              <span>Under</span>
+              <span>Healthy</span>
+              <span>Over</span>
+            </div>
+            <p id="bmi-summary">Your body weight is currently in the healthy range.</p>
+          </div>
+        </section>
+
+        <section class="panel quick-log-panel">
+          <h2>Quick Log</h2>
+          <form id="quick-log-form" class="quick-log-form">
+            <div class="field-row">
+              <label>
+                Meal
+                <input type="text" id="quick-log-name" placeholder="Chicken, rice, veggies" />
+              </label>
+              <label>
+                Calories
+                <input type="number" id="quick-log-calories" min="0" value="0" />
+              </label>
+            </div>
+            <div class="field-row">
+              <label>
+                Protein (g)
+                <input type="number" id="quick-log-protein" min="0" value="0" />
+              </label>
+              <label>
+                Carbs (g)
+                <input type="number" id="quick-log-carbs" min="0" value="0" />
+              </label>
+            </div>
+            <label>
+              Fat (g)
+              <input type="number" id="quick-log-fat" min="0" value="0" />
+            </label>
+            <button type="submit">Add quick log</button>
+          </form>
+
+          <div class="recipe-import">
+            <h3>Recipe import</h3>
+            <label>
+              Paste recipe text or nutrition facts
+              <textarea id="recipe-input" rows="5" placeholder="Paste a recipe, ingredient list, or nutrition label here..."></textarea>
+            </label>
+
+            <div class="recipe-actions">
+              <label class="file-upload">
+                Upload recipe
+                <input type="file" id="recipe-file" accept=".txt,.md,.csv,.json,.html" />
+              </label>
+              <button type="button" id="parse-recipe" class="secondary-button">Parse recipe</button>
+            </div>
+
+            <div id="recipe-summary" class="recipe-summary">No recipe loaded yet.</div>
+            <button type="button" id="add-recipe-meal" class="secondary-button recipe-add-button">Add parsed recipe</button>
+          </div>
+        </section>
+
+        <section class="panel trend-panel">
+          <h2>Weekly trend</h2>
+          <div id="weekly-trend" class="weekly-trend" aria-live="polite"></div>
+        </section>
+
+        <section class="panel progress-panel">
+          <h2>Today's Progress</h2>
+          <div class="progress-strip">
+            <div>
+              <span>Calories</span>
+              <strong id="today-calories">0 / 0</strong>
+            </div>
+            <div>
+              <span>Protein</span>
+              <strong id="today-protein">0 / 0g</strong>
+            </div>
+            <div>
+              <span>Carbs</span>
+              <strong id="today-carbs">0 / 0g</strong>
+            </div>
+            <div>
+              <span>Fat</span>
+              <strong id="today-fat">0 / 0g</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel summary-panel">
+          <div class="section-header">
+            <h2>Overview</h2>
+            <button id="clear-data" class="secondary-button">Clear data</button>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card calories">
+              <span class="label">Calories</span>
+              <strong id="calories-total">0</strong>
+              <small id="calories-goal">/ 2200</small>
+              <div class="progress">
+                <div id="calories-progress" class="progress-bar"></div>
+              </div>
+            </article>
+
+            <article class="stat-card protein">
+              <span class="label">Protein</span>
+              <strong id="protein-total">0</strong>
+              <small id="protein-goal">/ 160g</small>
+              <div class="progress">
+                <div id="protein-progress" class="progress-bar"></div>
+              </div>
+            </article>
+
+            <article class="stat-card carbs">
+              <span class="label">Carbs</span>
+              <strong id="carbs-total">0</strong>
+              <small id="carbs-goal">/ 250g</small>
+              <div class="progress">
+                <div id="carbs-progress" class="progress-bar"></div>
+              </div>
+            </article>
+
+            <article class="stat-card fat">
+              <span class="label">Fat</span>
+              <strong id="fat-total">0</strong>
+              <small id="fat-goal">/ 70g</small>
+              <div class="progress">
+                <div id="fat-progress" class="progress-bar"></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel goals-panel">
+          <h2>Daily goals</h2>
+          <form id="goals-form" class="goals-form">
+            <label>
+              Calories
+              <input type="number" id="goal-calories" min="0" value="2200" />
+            </label>
+            <label>
+              Protein (g)
+              <input type="number" id="goal-protein" min="0" value="160" />
+            </label>
+            <label>
+              Carbs (g)
+              <input type="number" id="goal-carbs" min="0" value="250" />
+            </label>
+            <label>
+              Fat (g)
+              <input type="number" id="goal-fat" min="0" value="70" />
+            </label>
+            <button type="submit">Save goals</button>
+          </form>
+        </section>
+
+        <section class="panel entry-panel">
+          <h2>Add meal</h2>
+          <form id="food-form" class="food-form">
+            <label>
+              Meal name
+              <input type="text" id="meal-name" placeholder="Lunch" />
+            </label>
+
+            <div class="meal-builder-header">
+              <h3>Foods in this meal</h3>
+              <button type="button" id="add-meal-item" class="secondary-button">+ Add food</button>
+            </div>
+
+            <div id="meal-items" class="meal-items"></div>
+
+            <button type="submit">Add meal</button>
+          </form>
+        </section>
+
+        <section class="panel list-panel">
+          <div class="section-header">
+            <h2>Meals</h2>
+          </div>
+          <ul id="food-list" class="food-list" aria-live="polite"></ul>
+        </section>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
