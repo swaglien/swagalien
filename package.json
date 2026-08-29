@@ -20,7 +20,8 @@
       "index.html",
       "style.css",
       "script.js",
-      "main.js"
+      "main.js",
+      "supabase-config.js"
     ],
     "win": {
       "target": "nsis"

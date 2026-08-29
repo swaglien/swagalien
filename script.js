@@ -26,9 +26,11 @@ function normalizeMeal(meal) {
   );
 
   return {
+    id: meal.id || crypto.randomUUID(),
     name: meal.name || 'Meal',
     date: meal.date || formatDateKey(),
     items: items.map((item) => ({
+      id: item.id || crypto.randomUUID(),
       name: item.name || 'Food',
       calories: Number(item.calories || 0),
       protein: Number(item.protein || 0),
@@ -177,8 +179,201 @@ const recipeSummaryEl = document.querySelector('#recipe-summary');
 const parseRecipeButton = document.querySelector('#parse-recipe');
 const addRecipeMealButton = document.querySelector('#add-recipe-meal');
 const weeklyTrendEl = document.querySelector('#weekly-trend');
+const authForm = document.querySelector('#auth-form');
+const authSignupButton = document.querySelector('#auth-signup');
+const authSignedOutEl = document.querySelector('#auth-signed-out');
+const authSignedInEl = document.querySelector('#auth-signed-in');
+const authEmailEl = document.querySelector('#auth-email');
+const authPasswordEl = document.querySelector('#auth-password');
+const authSubmitEl = document.querySelector('#auth-submit');
+const authUserEmailEl = document.querySelector('#auth-user-email');
+const authMessageEl = document.querySelector('#auth-message');
+const authSignoutButton = document.querySelector('#auth-signout');
+const syncNowButton = document.querySelector('#sync-now');
+const syncStatusEl = document.querySelector('#sync-status');
 
 let parsedRecipe = null;
+let authSession = JSON.parse(localStorage.getItem('nutrition-tracker-session') || 'null');
+let isPullingFromCloud = false;
+
+function setAuthMessage(message) {
+  authMessageEl.textContent = message;
+}
+
+function setSyncStatus(message, statusClass = '') {
+  syncStatusEl.textContent = message;
+  syncStatusEl.className = `sync-status ${statusClass}`;
+}
+
+async function supabaseRequest(path, options = {}) {
+  const headers = {
+    apikey: window.SUPABASE_CONFIG.publishableKey,
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+
+  if (authSession?.access_token) {
+    headers.Authorization = `Bearer ${authSession.access_token}`;
+  }
+
+  const response = await fetch(`${window.SUPABASE_CONFIG.url}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.msg || errorBody.message || `Request failed (${response.status})`);
+  }
+
+  return response.status === 204 ? null : response.json();
+}
+
+async function authenticate(endpoint, email, password) {
+  const result = await supabaseRequest(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!result.access_token) {
+    throw new Error('Check your email to confirm your account, then sign in.');
+  }
+
+  authSession = result;
+  localStorage.setItem('nutrition-tracker-session', JSON.stringify(result));
+}
+
+function setAuthenticatedUI() {
+  const isSignedIn = Boolean(authSession?.access_token);
+  authSignedOutEl.hidden = isSignedIn;
+  authSignedInEl.hidden = !isSignedIn;
+  authUserEmailEl.textContent = authSession?.user?.email || '';
+  if (!isSignedIn) setSyncStatus('Local only');
+}
+
+async function syncToCloud() {
+  if (!authSession?.access_token) return;
+
+  setSyncStatus('Syncing...', 'is-syncing');
+  const userId = authSession.user.id;
+
+  await supabaseRequest('/rest/v1/profiles?on_conflict=user_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      user_id: userId,
+      name: state.profile.name || '',
+      age: Number(state.profile.age || 0),
+      weight_kg: state.profile.units === 'imperial' ? Number(lbToKg(state.profile.weight || 0).toFixed(2)) : Number(state.profile.weight || 0),
+      height_cm: state.profile.units === 'imperial' ? Number(inToCm(state.profile.height || 0).toFixed(2)) : Number(state.profile.height || 0),
+      goal: state.profile.goal || 'maintain',
+      units: state.profile.units || 'metric',
+    }),
+  });
+
+  await supabaseRequest('/rest/v1/goals?on_conflict=user_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ user_id: userId, ...state.goals }),
+  });
+
+  for (const meal of state.meals) {
+    await supabaseRequest('/rest/v1/meals?on_conflict=id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({
+        id: meal.id,
+        user_id: userId,
+        name: meal.name || 'Meal',
+        meal_date: meal.date || formatDateKey(),
+        calories: Number(meal.calories || 0),
+        protein: Number(meal.protein || 0),
+        carbs: Number(meal.carbs || 0),
+        fat: Number(meal.fat || 0),
+      }),
+    });
+
+    await supabaseRequest('/rest/v1/meal_items?on_conflict=id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: meal.items.map((item) => ({
+        id: item.id || crypto.randomUUID(),
+        meal_id: meal.id,
+        user_id: userId,
+        name: item.name || 'Food',
+        calories: Number(item.calories || 0),
+        protein: Number(item.protein || 0),
+        carbs: Number(item.carbs || 0),
+        fat: Number(item.fat || 0),
+      })),
+    });
+  }
+
+  setSyncStatus('Synced', 'is-synced');
+}
+
+async function pullFromCloud() {
+  if (!authSession?.access_token) return;
+
+  setSyncStatus('Syncing...', 'is-syncing');
+  const userId = authSession.user.id;
+  const [profiles, goals, meals, items] = await Promise.all([
+    supabaseRequest(`/rest/v1/profiles?user_id=eq.${userId}&select=*`),
+    supabaseRequest(`/rest/v1/goals?user_id=eq.${userId}&select=*`),
+    supabaseRequest(`/rest/v1/meals?user_id=eq.${userId}&deleted_at=is.null&select=*`),
+    supabaseRequest(`/rest/v1/meal_items?user_id=eq.${userId}&deleted_at=is.null&select=*`),
+  ]);
+
+  isPullingFromCloud = true;
+  try {
+    state.profile = profiles[0]
+      ? {
+        name: profiles[0].name || '',
+        age: Number(profiles[0].age || 0),
+        weight: profiles[0].units === 'imperial' ? Number(kgToLb(profiles[0].weight_kg || 0).toFixed(1)) : Number(profiles[0].weight_kg || 0),
+        height: profiles[0].units === 'imperial' ? Number(cmToIn(profiles[0].height_cm || 0).toFixed(1)) : Number(profiles[0].height_cm || 0),
+        goal: profiles[0].goal || 'maintain',
+        units: profiles[0].units || 'metric',
+      }
+      : { ...defaultProfile };
+    state.goals = goals[0]
+      ? {
+        calories: Number(goals[0].calories || 0),
+        protein: Number(goals[0].protein || 0),
+        carbs: Number(goals[0].carbs || 0),
+        fat: Number(goals[0].fat || 0),
+      }
+      : { ...defaultGoals };
+    state.meals = meals.map((meal) => normalizeMeal({
+      ...meal,
+      date: meal.meal_date,
+      items: items.filter((item) => item.meal_id === meal.id),
+    }));
+    localStorage.setItem(profileStorageKey, JSON.stringify(state.profile));
+    localStorage.setItem(goalsStorageKey, JSON.stringify(state.goals));
+    localStorage.setItem(isDesktopApp ? `${STORAGE_KEY}-desktop` : STORAGE_KEY, JSON.stringify(state.meals));
+  } finally {
+    isPullingFromCloud = false;
+  }
+
+  setSyncStatus('Synced', 'is-synced');
+}
+
+function queueSync() {
+  if (authSession?.access_token) {
+    syncToCloud().catch((error) => setSyncStatus(`Sync error: ${error.message}`));
+  }
+}
+
+function clearLocalDataForNewAccount() {
+  state.profile = { ...defaultProfile };
+  state.goals = { ...defaultGoals };
+  state.meals = [];
+  localStorage.setItem(profileStorageKey, JSON.stringify(state.profile));
+  localStorage.setItem(goalsStorageKey, JSON.stringify(state.goals));
+  localStorage.setItem(isDesktopApp ? `${STORAGE_KEY}-desktop` : STORAGE_KEY, JSON.stringify(state.meals));
+}
 
 function extractMacroValue(text, keywords) {
   const pattern = new RegExp(`(?:${keywords.join('|')})\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:g|grams?|kcal|cal|cals)?`, 'i');
@@ -281,14 +476,17 @@ function createMealItem() {
 
 function saveMeals() {
   localStorage.setItem(isDesktopApp ? `${STORAGE_KEY}-desktop` : STORAGE_KEY, JSON.stringify(state.meals));
+  if (!isPullingFromCloud) queueSync();
 }
 
 function saveGoals() {
   localStorage.setItem(goalsStorageKey, JSON.stringify(state.goals));
+  if (!isPullingFromCloud) queueSync();
 }
 
 function saveProfile() {
   localStorage.setItem(profileStorageKey, JSON.stringify(state.profile));
+  if (!isPullingFromCloud) queueSync();
 }
 
 function calculateTotals() {
@@ -645,6 +843,81 @@ recipeFileEl.addEventListener('change', async (event) => {
   readRecipeText(text, file.name);
 });
 
+authForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  authSubmitEl.disabled = true;
+  setAuthMessage('Signing in...');
+
+  try {
+    await authenticate('/auth/v1/token?grant_type=password', authEmailEl.value.trim(), authPasswordEl.value);
+    setAuthenticatedUI();
+    setAuthMessage('');
+    await pullFromCloud();
+    renderProfileInputs();
+    renderGoalInputs();
+    renderRecommendedSummary();
+    renderBodyStatus();
+    render();
+  } catch (error) {
+    setAuthMessage(error.message);
+  } finally {
+    authSubmitEl.disabled = false;
+  }
+});
+
+authSignupButton.addEventListener('click', async () => {
+  if (!authEmailEl.value.trim() || !authPasswordEl.value) {
+    setAuthMessage('Enter an email and password first.');
+    return;
+  }
+
+  authSignupButton.disabled = true;
+  setAuthMessage('Creating account...');
+
+  try {
+    await authenticate('/auth/v1/signup', authEmailEl.value.trim(), authPasswordEl.value);
+    setAuthenticatedUI();
+    setAuthMessage('Account created.');
+    clearLocalDataForNewAccount();
+    renderProfileInputs();
+    renderGoalInputs();
+    renderRecommendedSummary();
+    renderBodyStatus();
+    render();
+    await syncToCloud();
+  } catch (error) {
+    setAuthMessage(error.message);
+  } finally {
+    authSignupButton.disabled = false;
+  }
+});
+
+authSignoutButton.addEventListener('click', async () => {
+  try {
+    await supabaseRequest('/auth/v1/logout', { method: 'POST' });
+  } catch (error) {
+    setAuthMessage(error.message);
+  }
+
+  authSession = null;
+  localStorage.removeItem('nutrition-tracker-session');
+  setAuthenticatedUI();
+  setAuthMessage('Signed out. Local data remains on this device.');
+});
+
+syncNowButton.addEventListener('click', async () => {
+  try {
+    await pullFromCloud();
+    renderProfileInputs();
+    renderGoalInputs();
+    renderRecommendedSummary();
+    renderBodyStatus();
+    render();
+  } catch (error) {
+    setSyncStatus(`Sync error: ${error.message}`);
+  }
+});
+
 quickLogForm.addEventListener('submit', (event) => {
   event.preventDefault();
 
@@ -797,3 +1070,16 @@ renderRecommendedSummary();
 renderBodyStatus();
 render();
 renderMealItems();
+setAuthenticatedUI();
+
+if (authSession?.access_token) {
+  pullFromCloud()
+    .then(() => {
+      renderProfileInputs();
+      renderGoalInputs();
+      renderRecommendedSummary();
+      renderBodyStatus();
+      render();
+    })
+    .catch((error) => setSyncStatus(`Sync error: ${error.message}`));
+}
