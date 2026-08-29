@@ -177,6 +177,8 @@ const recipeInputEl = document.querySelector('#recipe-input');
 const recipeFileEl = document.querySelector('#recipe-file');
 const recipeSummaryEl = document.querySelector('#recipe-summary');
 const parseRecipeButton = document.querySelector('#parse-recipe');
+const scanRecipeButton = document.querySelector('#scan-recipe');
+const ocrStatusEl = document.querySelector('#ocr-status');
 const addRecipeMealButton = document.querySelector('#add-recipe-meal');
 const weeklyTrendEl = document.querySelector('#weekly-trend');
 const authForm = document.querySelector('#auth-form');
@@ -191,9 +193,16 @@ const authMessageEl = document.querySelector('#auth-message');
 const authSignoutButton = document.querySelector('#auth-signout');
 const syncNowButton = document.querySelector('#sync-now');
 const syncStatusEl = document.querySelector('#sync-status');
+const updateMessageEl = document.querySelector('#update-message');
 
 let parsedRecipe = null;
 let authSession = JSON.parse(localStorage.getItem('nutrition-tracker-session') || 'null');
+
+if (window.desktopUpdates) {
+  window.desktopUpdates.onStatusChange((message) => {
+    updateMessageEl.textContent = message;
+  });
+}
 let isPullingFromCloud = false;
 
 function setAuthMessage(message) {
@@ -384,10 +393,10 @@ function extractMacroValue(text, keywords) {
 function parseRecipeText(rawText) {
   const text = String(rawText || '').toLowerCase();
 
-  const calories = extractMacroValue(text, ['calories', 'cals', 'kcal', 'energy']) || 0;
+  const calories = extractMacroValue(text, ['calories', 'cals', 'kcal', 'energy']) || extractMacroValue(text, ['calories?\\s*from\\s*fat']) || 0;
   const protein = extractMacroValue(text, ['protein', 'prot']) || 0;
-  const carbs = extractMacroValue(text, ['carbs', 'carbohydrate', 'carbohydrates', 'carb']) || 0;
-  const fat = extractMacroValue(text, ['fat', 'total fat']) || 0;
+  const carbs = extractMacroValue(text, ['carbs', 'carbohydrate', 'carbohydrates', 'carb', 'total\\s*carbohydrate']) || 0;
+  const fat = extractMacroValue(text, ['fat', 'total fat', 'total\\s*fat']) || 0;
 
   return {
     calories: Math.round(calories),
@@ -839,8 +848,48 @@ recipeFileEl.addEventListener('change', async (event) => {
   if (!file) return;
 
   const text = await file.text();
+  if (file.type.startsWith('image/')) {
+    recipeInputEl.value = '';
+    ocrStatusEl.textContent = 'Photo ready. Click Scan photo to read it.';
+    return;
+  }
+
   recipeInputEl.value = text.slice(0, 4000);
   readRecipeText(text, file.name);
+});
+
+scanRecipeButton.addEventListener('click', async () => {
+  const file = recipeFileEl.files && recipeFileEl.files[0];
+  if (!file || !file.type.startsWith('image/')) {
+    ocrStatusEl.textContent = 'Choose a nutrition-label photo first.';
+    return;
+  }
+
+  if (!window.Tesseract) {
+    ocrStatusEl.textContent = 'Photo scanning is unavailable while offline. Connect to the internet and try again.';
+    return;
+  }
+
+  scanRecipeButton.disabled = true;
+  ocrStatusEl.textContent = 'Reading photo...';
+
+  try {
+    const result = await window.Tesseract.recognize(file, 'eng', {
+      logger: (message) => {
+        if (message.status === 'recognizing text' && message.progress) {
+          ocrStatusEl.textContent = `Reading photo... ${Math.round(message.progress * 100)}%`;
+        }
+      },
+    });
+
+    recipeInputEl.value = result.data.text.trim();
+    readRecipeText(result.data.text, file.name);
+    ocrStatusEl.textContent = 'Photo text extracted. Check the numbers, then add the recipe.';
+  } catch (error) {
+    ocrStatusEl.textContent = 'Could not read that photo. Try a brighter, closer image of the nutrition label.';
+  } finally {
+    scanRecipeButton.disabled = false;
+  }
 });
 
 authForm.addEventListener('submit', async (event) => {

@@ -104,6 +104,13 @@ select {
   text-align: right;
 }
 
+.update-message {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-align: right;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   text-transform: uppercase;
@@ -482,6 +489,13 @@ button:hover {
   width: 100%;
 }
 
+.ocr-status {
+  min-height: 18px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .progress-strip div {
   border: 1px solid var(--border);
   background: var(--panel-alt);
@@ -608,7 +622,8 @@ button:hover {
 
   .auth-form,
   .auth-signed-in,
-  .auth-message {
+  .auth-message,
+  .update-message {
     justify-content: flex-start;
     text-align: left;
   }

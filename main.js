@@ -1,5 +1,25 @@
 const { app, BrowserWindow } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('node:path');
+
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
+
+function configureAutoUpdates(window) {
+  if (!app.isPackaged) return;
+
+  autoUpdater.on('update-downloaded', () => {
+    window.webContents.send('update-status', 'Update downloaded. It will install when you close the app.');
+  });
+
+  autoUpdater.on('error', () => {
+    window.webContents.send('update-status', 'Updates are temporarily unavailable.');
+  });
+
+  autoUpdater.checkForUpdates().catch(() => {
+    window.webContents.send('update-status', 'Updates are temporarily unavailable.');
+  });
+}
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -12,12 +32,14 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
   window.loadFile(path.join(__dirname, 'index.html'), {
     query: { desktop: '1' },
   });
+  configureAutoUpdates(window);
 }
 
 app.whenReady().then(() => {

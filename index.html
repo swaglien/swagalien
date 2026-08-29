@@ -29,6 +29,7 @@
             <button type="button" id="auth-signout" class="secondary-button">Sign out</button>
           </div>
           <p id="auth-message" class="auth-message" role="status"></p>
+          <p id="update-message" class="update-message" role="status"></p>
         </section>
       </header>
 
@@ -154,11 +155,13 @@
             <div class="recipe-actions">
               <label class="file-upload">
                 Upload recipe
-                <input type="file" id="recipe-file" accept=".txt,.md,.csv,.json,.html" />
+                <input type="file" id="recipe-file" accept=".txt,.md,.csv,.json,.html,image/*" />
               </label>
               <button type="button" id="parse-recipe" class="secondary-button">Parse recipe</button>
+              <button type="button" id="scan-recipe" class="secondary-button">Scan photo</button>
             </div>
 
+            <p id="ocr-status" class="ocr-status"></p>
             <div id="recipe-summary" class="recipe-summary">No recipe loaded yet.</div>
             <button type="button" id="add-recipe-meal" class="secondary-button recipe-add-button">Add parsed recipe</button>
           </div>
@@ -288,6 +291,7 @@
     </div>
 
     <script src="supabase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
