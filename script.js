@@ -357,7 +357,14 @@ async function pullFromCloud() {
     state.meals = meals.map((meal) => normalizeMeal({
       ...meal,
       date: meal.meal_date,
-      items: items.filter((item) => item.meal_id === meal.id),
+      items: items.filter((item) => item.meal_id === meal.id).map((item) => ({
+        id: item.id,
+        name: item.name,
+        calories: item.calories,
+        protein: item.protein,
+        carbs: item.carbs,
+        fat: item.fat,
+      })),
     }));
     localStorage.setItem(profileStorageKey, JSON.stringify(state.profile));
     localStorage.setItem(goalsStorageKey, JSON.stringify(state.goals));
@@ -501,7 +508,15 @@ function saveProfile() {
 function calculateTotals() {
   return state.meals.reduce(
     (totals, meal) => {
-      const items = Array.isArray(meal.items) ? meal.items : [meal];
+      const items = Array.isArray(meal.items) ? meal.items : [];
+
+      if (!items.length) {
+        totals.calories += Number(meal.calories || 0);
+        totals.protein += Number(meal.protein || 0);
+        totals.carbs += Number(meal.carbs || 0);
+        totals.fat += Number(meal.fat || 0);
+        return totals;
+      }
 
       items.forEach((item) => {
         totals.calories += Number(item.calories || 0);
